@@ -17,7 +17,7 @@ public class CacheService
   {
     string filePath = Path.Combine(CacheDirectory, fileName);
     bool fileExists = File.Exists(filePath);
-    bool toRefresh = File.GetLastWriteTime(filePath).AddDays(daysToRefresh) < DateTime.Now;
+    bool toRefresh = File.GetLastWriteTime(filePath).AddDays(daysToRefresh) < DateTime.Today;
 
     if (!fileExists || toRefresh) return true;
 

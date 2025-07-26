@@ -7,14 +7,34 @@ namespace athan.Services;
 public class AthanService(HttpClient client)
 {
   private readonly HttpClient _client = client;
+  private readonly string baseApiStr = "https://api.aladhan.com/v1"; 
+  private readonly string todaysDate = DateTime.Today.ToString("dd-MM-yyyy");
 
   public async Task<AthanTimes> FetchAthanTimesWithCoordsAsync(double latitude, double longitude)
   {
-    DateTime date = DateTime.Today;
-    string formattedDate = date.ToString("dd-MM-yyyy");
-    string apiString = $"https://api.aladhan.com/v1/timings/{formattedDate}?latitude={latitude}&longitude={longitude}&method=3";
+    string apiString = $"{baseApiStr}/timings/{todaysDate}?latitude={latitude}&longitude={longitude}&method=3";
 
-    var response = await _client.GetAsync(apiString);
+    string jsonContent = await GetApiResponse(apiString); 
+
+    AthanTimes athanTimes = ExtractAthanTimes(jsonContent);
+
+    return athanTimes;
+  }
+
+  public async Task<AthanTimes> FetchAthanTimesWithCityAndCountry(string city, string country)
+  {
+    string apiString = $"{baseApiStr}/timingsByCity/{todaysDate}?city={city}&country={country}&method=3";
+
+    string jsonContent = await GetApiResponse(apiString);
+
+    AthanTimes athanTimes = ExtractAthanTimes(jsonContent);
+
+    return athanTimes; 
+  }
+
+  private async Task<string> GetApiResponse(string apiStr)
+  {
+    var response = await _client.GetAsync(apiStr);
 
     if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
     {
@@ -25,7 +45,7 @@ public class AthanService(HttpClient client)
     response.EnsureSuccessStatusCode();
     string jsonContent = await response.Content.ReadAsStringAsync();
 
-    return ExtractAthanTimes(jsonContent);
+    return jsonContent;
   }
 
   private static AthanTimes ExtractAthanTimes(string jsonContent)
