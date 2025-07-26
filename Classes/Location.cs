@@ -6,8 +6,8 @@ public class Location
 {
   public string City { get; set; }
   public string Country { get; set; }
-  public double Latitude { get; set; }
-  public double Longitude { get; set; }
+  public double? Latitude { get; set; }
+  public double? Longitude { get; set; }
 
   public Location(string city, string country, double latitude, double longitude)
   {
@@ -16,13 +16,10 @@ public class Location
     Latitude = latitude;
     Longitude = longitude;
   }
-
-  public Location()
+  public Location(string city, string country)
   {
-    City = string.Empty;
-    Country = string.Empty;
-    Latitude = 0.0;
-    Longitude = 0.0;
+    City = city;
+    Country = country;
   }
 
   public string LocationString() => $"Prayer times for {City}, {Country}";

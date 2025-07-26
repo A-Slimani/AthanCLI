@@ -24,12 +24,12 @@ public class CacheService
     return false;
   }
 
-  public async Task SaveToCache<T>(string fileName, T content)
+  public Task SaveToCache<T>(string fileName, T content)
   {
     string convertedContent = JsonSerializer.Serialize(content);
     string filePath = Path.Combine(CacheDirectory, fileName);
 
-    await File.WriteAllTextAsync(filePath, convertedContent);
+    return File.WriteAllTextAsync(filePath, convertedContent);
   }
 
   public T? GetCachedData<T>(string fileName)

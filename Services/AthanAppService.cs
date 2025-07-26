@@ -3,13 +3,21 @@ using athan.Services;
 
 public class AthanAppService
 {
-  private readonly CacheService _cacheService = new();
+  private readonly CacheService _cacheService;
+  private readonly string locationCacheFilePath;
+  private readonly string athanCacheFilePath;
+
+  public AthanAppService()
+  {
+    _cacheService = new();
+    locationCacheFilePath = Path.Combine(_cacheService.CacheDirectory, "location.json");
+    athanCacheFilePath = Path.Combine(_cacheService.CacheDirectory, "athan.json");
+  }
 
   public async Task<(AthanTimes, Location)> UpdateAndGetDataAsync(bool forceRefresh)
   {
     _cacheService.CreateCache();
 
-    string locationCacheFilePath = Path.Combine(_cacheService.CacheDirectory, "location.json");
     var location = _cacheService.GetCachedData<Location>(locationCacheFilePath);
     int locationUpdateFreqDays = 7;
 
@@ -23,7 +31,6 @@ public class AthanAppService
       Console.WriteLine($"New set location: {location.City}, {location.Country}");
     }
 
-    string athanCacheFilePath = Path.Combine(_cacheService.CacheDirectory, "athan.json");
     var athanTimes = _cacheService.GetCachedData<AthanTimes>(athanCacheFilePath);
     int athanUpdateFreqDays = 1;
 
@@ -32,8 +39,7 @@ public class AthanAppService
       using var client = new HttpClient();
       var athanService = new AthanService(client);
 
-      Double lat;
-      Double lon;
+      double? lat, lon;
       if (location != null)
       {
         lat = location.Latitude;
@@ -41,7 +47,11 @@ public class AthanAppService
       }
       else throw new InvalidOperationException("Missing location");
 
-      athanTimes = await athanService.FetchAthanTimesWithCoordsAsync(lat, lon);
+      if (lat.HasValue && lon.HasValue)
+        athanTimes = await athanService.FetchAthanTimesWithCoordsAsync(lat.Value, lon.Value);
+      else
+        athanTimes = await athanService.FetchAthanTimesWithCityAndCountry(location.City, location.Country);
+
       _ = _cacheService.SaveToCache(athanCacheFilePath, athanTimes);
     }
 
@@ -50,4 +60,10 @@ public class AthanAppService
 
     return (athanTimes, location);
   }
+
+  // public void ManualOverrideLocation(string city, string country)
+  // {
+  //   Location overrideLocation = new(city, country);
+  //   _cacheService.SaveToCache(locationCacheFilePath, overrideLocation);
+  // }
 }
