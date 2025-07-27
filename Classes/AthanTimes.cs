@@ -1,26 +1,11 @@
-﻿using Spectre.Console;
+﻿using System.Text.Json.Serialization;
+using Spectre.Console;
 
-namespace athan.Models;
+namespace Athan.Classes;
+
 
 public class AthanTimes
 {
-  public TimeOnly Fajr { get; set; }
-  public TimeOnly Sunrise { get; set; }
-  public TimeOnly Dhuhr { get; set; }
-  public TimeOnly Asr { get; set; }
-  public TimeOnly Maghrib { get; set; }
-  public TimeOnly Isha { get; set; }
-
-  public AthanTimes(TimeOnly fajr, TimeOnly sunrise, TimeOnly dhuhr, TimeOnly asr, TimeOnly maghrib, TimeOnly isha)
-  {
-    Fajr = fajr;
-    Sunrise = sunrise;
-    Dhuhr = dhuhr;
-    Asr = asr;
-    Maghrib = maghrib;
-    Isha = isha;
-  }
-
   public AthanTimes(string fajr, string sunrise, string dhuhr, string asr, string maghrib, string isha)
   {
     Fajr = TimeOnly.Parse(fajr);
@@ -31,15 +16,23 @@ public class AthanTimes
     Isha = TimeOnly.Parse(isha);
   }
 
-  public AthanTimes()
+  [JsonConstructor]
+  public AthanTimes(TimeOnly fajr, TimeOnly sunrise, TimeOnly dhuhr, TimeOnly asr, TimeOnly maghrib, TimeOnly isha)
   {
-    Fajr = TimeOnly.MinValue;
-    Sunrise = TimeOnly.MinValue;
-    Dhuhr = TimeOnly.MinValue;
-    Asr = TimeOnly.MinValue;
-    Maghrib = TimeOnly.MinValue;
-    Isha = TimeOnly.MinValue;
+    Fajr = fajr;
+    Sunrise = sunrise;
+    Dhuhr = dhuhr;
+    Asr = asr;
+    Maghrib = maghrib;
+    Isha = isha;
   }
+  
+  public TimeOnly Fajr { get; }
+  public TimeOnly Sunrise { get; }
+  public TimeOnly Dhuhr { get; }
+  public TimeOnly Asr { get; }
+  public TimeOnly Maghrib { get; }
+  public TimeOnly Isha { get; }
 
   public Table AthanTable()
   {
@@ -61,16 +54,16 @@ public class AthanTimes
   public string NextAthanTime()
   {
     TimeOnly currentTime = TimeOnly.FromDateTime(DateTime.Now);
-    var (name, nextTime) = currentTime switch
+    (string name, TimeOnly nextTime) = currentTime switch
     {
-      var t when t < Dhuhr => (nameof(Dhuhr), Dhuhr),
-      var t when t < Asr => (nameof(Asr), Asr),
-      var t when t < Maghrib => (nameof(Maghrib), Maghrib),
-      var t when t < Isha => (nameof(Isha), Isha),
+      _ when currentTime < Dhuhr => (nameof(Dhuhr), Dhuhr),
+      _ when currentTime < Asr => (nameof(Asr), Asr),
+      _ when currentTime < Maghrib => (nameof(Maghrib), Maghrib),
+      _ when currentTime < Isha => (nameof(Isha), Isha),
       _ => (nameof(Fajr), Fajr),
     };
 
-    var timeDiff = nextTime.ToTimeSpan() - currentTime.ToTimeSpan();
+    TimeSpan timeDiff = nextTime.ToTimeSpan() - currentTime.ToTimeSpan();
     if (name == "Fajr")
     {
       timeDiff = nextTime.ToTimeSpan() + TimeSpan.FromDays(1) - currentTime.ToTimeSpan();

@@ -1,52 +1,96 @@
-﻿using System.Security.Authentication;
+﻿using System.Net;
+using Athan.Classes;
+using athan.Services;
+using Athan.Services;
 using Spectre.Console;
 
-AthanAppService athanAppService = new();
+const string locationCacheFile = "location.json";
+const string athanTimesCacheFile = "athan.json";
+const int locationDaysToRefresh = 7;
+const int athantimesDaysToRefresh = 1;
 
-Console.WriteLine();
-// if (args.Length > 0)
-// {
-// 
-// 
-//   var (athanTimes, location) = await athanAppService.UpdateAndGetDataAsync(forceRefresh);
-// 
-//   if (showAll)
-//   {
-//     Console.WriteLine(location.LocationString());
-//     AnsiConsole.Write(athanTimes.AthanTable());
-//   }
-//   else
-//   {
-//     Console.WriteLine(athanTimes.NextAthanTime());
-//   }
-// }
-// else
-// {
-//   var (athanTimes, _) = await athanAppService.UpdateAndGetDataAsync(false);
-//   Console.WriteLine(athanTimes.NextAthanTime());
-// }
+HttpClient client = new();
+CacheService cacheService = new();
+cacheService.CreateCache();
 
-var options = AthanOptions.FromArgs(args);
+bool locationRefresh = cacheService.RefreshCheck(locationCacheFile, locationDaysToRefresh);
+bool athanRefresh = cacheService.RefreshCheck(athanTimesCacheFile, athantimesDaysToRefresh);
 
+AthanTimes athanTimes;
+Location location;
+
+AthanOptions options = AthanOptions.FromArgs(args);
+
+// GENERATING LOCATION SECTION
 if (options.SetManualLocation)
 {
-  if (options.LocationStr == null)
+  if (options.ForceRefreshLocation)
+  {
+    Console.WriteLine("Cannot use --force-refresh-location with --set-location together");
+    Environment.Exit(0);
+  }
+  else if (options.LocationStr == null)
   {
     Console.WriteLine("Enter the desired location after the --set-location flag in this format \"City, Country\"");
+    Environment.Exit(0);
   }
   else
   {
-    string[] OverrideLocation = options.LocationStr.Split(',');
-    if (OverrideLocation.Length == 2)
+    try
     {
-      string city = OverrideLocation[0];
-      string country = OverrideLocation[1];
-      // athanAppService.ManualOverrideLocation(city, country);
+      location = LocationService.ManualSetLocation(options.LocationStr);
+      await cacheService.SaveToCache(location, locationCacheFile);
     }
-    else throw new InvalidOperationException("Invalid city / country format. Correct format -> \"City, Country\" "); 
+    catch (Exception e)
+    {
+      Console.WriteLine(e.Message);
+      Environment.Exit(0);
+    }
+  }
+}
+else if (options.ForceRefreshLocation || locationRefresh)
+{
+  location = await LocationService.FetchLocationAsync(client);
+  await cacheService.SaveToCache(location, locationCacheFile);
+}
+
+// GENERATING ATHAN SECTION
+if (options.ForceRefreshAthan || athanRefresh)
+{
+  try
+  {
+    location = cacheService.GetCachedData<Location>(locationCacheFile);
+    if (location.Latitude != null && location.Longitude != null)
+    {
+      double latitude = location.Latitude.Value; 
+      double longitude = location.Longitude.Value; 
+      athanTimes = await AthanService.FetchAthanTimesWithCoordsAsync(client, latitude, longitude);
+    }
+    else
+    {
+      string city = location.City;  
+      string country = location.Country;
+      athanTimes = await AthanService.FetchAthanTimesWithCityAndCountry(client, city, country);
+    }
+
+    await cacheService.SaveToCache(athanTimes, athanTimesCacheFile);
+  }
+  catch (Exception e) 
+  {
+    Console.WriteLine(e.Message);
   }
 }
 
-var (athanTimes, location) = await athanAppService.UpdateAndGetDataAsync(options.ForceRefresh);
+// FETCH DATA
+location = cacheService.GetCachedData<Location>(locationCacheFile);
+athanTimes = cacheService.GetCachedData<AthanTimes>(athanTimesCacheFile);
+
+// DISPLAY OUTPUT 
+if (options.ShowAll)
+{
+  AnsiConsole.WriteLine(location.LocationString());
+  AnsiConsole.Write(athanTimes.AthanTable());
+}
+else AnsiConsole.Write(athanTimes.NextAthanTime());
 
 Console.WriteLine();

@@ -1,48 +1,48 @@
 using System.Text.Json;
 
+namespace Athan.Services;
+
 public class CacheService
 {
-  public string CacheDirectory = Path.Combine(Path.GetTempPath(), "AthanAppTemp");
-  public List<string>? CachedFiles { get; set; }
+  private readonly string _cacheDirectory = Path.Combine(Path.GetTempPath(), "AthanAppTemp");
 
   public void CreateCache()
   {
-    if (string.IsNullOrWhiteSpace(CacheDirectory))
+    if (string.IsNullOrWhiteSpace(_cacheDirectory))
       throw new InvalidOperationException("Cache directory path is not set.");
 
-    Directory.CreateDirectory(CacheDirectory);
+    Directory.CreateDirectory(_cacheDirectory);
   }
 
   public bool RefreshCheck(string fileName, int daysToRefresh)
   {
-    string filePath = Path.Combine(CacheDirectory, fileName);
+    string filePath = Path.Combine(_cacheDirectory, fileName);
     bool fileExists = File.Exists(filePath);
     bool toRefresh = File.GetLastWriteTime(filePath).AddDays(daysToRefresh) < DateTime.Today;
 
-    if (!fileExists || toRefresh) return true;
-
-    return false;
+    return !fileExists || toRefresh;
   }
 
-  public Task SaveToCache<T>(string fileName, T content)
+  public Task SaveToCache<T>(T content, string fileName)
   {
     string convertedContent = JsonSerializer.Serialize(content);
-    string filePath = Path.Combine(CacheDirectory, fileName);
+    string filePath = Path.Combine(_cacheDirectory, fileName);
 
     return File.WriteAllTextAsync(filePath, convertedContent);
   }
 
-  public T? GetCachedData<T>(string fileName)
+  public T GetCachedData<T>(string fileName)
   {
-    string filePath = Path.Combine(CacheDirectory, fileName);
+    string filePath = Path.Combine(_cacheDirectory, fileName);
 
-    if (File.Exists(filePath))
-    {
-      using var fileStream = File.OpenRead(filePath);
-      var result = JsonSerializer.Deserialize<T>(fileStream);
-      return result;
-    }
-
-    return default;
+    if (!File.Exists(filePath)) throw new FileNotFoundException();
+    
+    using FileStream fileStream = File.OpenRead(filePath);
+    
+    T? result = JsonSerializer.Deserialize<T>(fileStream);
+    
+    if (result == null) throw new InvalidOperationException("Failed to deserialize file.");
+    
+    return result;
   }
 }

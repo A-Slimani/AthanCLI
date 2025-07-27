@@ -1,40 +1,37 @@
 ﻿using System.Diagnostics.Contracts;
 using System.Text.Json;
-using athan.Models;
+using Athan.Classes;
 
 namespace athan.Services;
 
-public class AthanService(HttpClient client)
+public abstract class AthanService()
 {
-  private readonly HttpClient _client = client;
-  private readonly string baseApiStr = "https://api.aladhan.com/v1"; 
-  private readonly string todaysDate = DateTime.Today.ToString("dd-MM-yyyy");
+  private const string BaseApiStr = "https://api.aladhan.com/v1";
+  private static readonly string TodaysDate = DateTime.Today.ToString("dd-MM-yyyy");
 
-  public async Task<AthanTimes> FetchAthanTimesWithCoordsAsync(double latitude, double longitude)
+  public static async Task<AthanTimes> FetchAthanTimesWithCoordsAsync(HttpClient client, double latitude, double longitude)
   {
-    string apiString = $"{baseApiStr}/timings/{todaysDate}?latitude={latitude}&longitude={longitude}&method=3";
-
-    string jsonContent = await GetApiResponse(apiString); 
-
+    string apiString = $"{BaseApiStr}/timings/{TodaysDate}?latitude={latitude}&longitude={longitude}&method=3";
+    string jsonContent = await GetApiResponse(client, apiString); 
+    
     AthanTimes athanTimes = ExtractAthanTimes(jsonContent);
 
     return athanTimes;
   }
 
-  public async Task<AthanTimes> FetchAthanTimesWithCityAndCountry(string city, string country)
+  public static async Task<AthanTimes> FetchAthanTimesWithCityAndCountry(HttpClient client, string city, string country)
   {
-    string apiString = $"{baseApiStr}/timingsByCity/{todaysDate}?city={city}&country={country}&method=3";
-
-    string jsonContent = await GetApiResponse(apiString);
+    string apiString = $"{BaseApiStr}/timingsByCity/{TodaysDate}?city={city}&country={country}&method=3";
+    string jsonContent = await GetApiResponse(client, apiString);
 
     AthanTimes athanTimes = ExtractAthanTimes(jsonContent);
 
     return athanTimes; 
   }
 
-  private async Task<string> GetApiResponse(string apiStr)
+  private static async Task<string> GetApiResponse(HttpClient client, string apiStr)
   {
-    var response = await _client.GetAsync(apiStr);
+    HttpResponseMessage response = await client.GetAsync(apiStr);
 
     if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
     {
@@ -53,12 +50,12 @@ public class AthanService(HttpClient client)
     using JsonDocument doc = JsonDocument.Parse(jsonContent);
     JsonElement prayerTimes = doc.RootElement.GetProperty("data").GetProperty("timings");
 
-    var fajr = prayerTimes.GetProperty("Fajr").ToString();
-    var sunrise = prayerTimes.GetProperty("Sunrise").ToString();
-    var dhuhr = prayerTimes.GetProperty("Dhuhr").ToString();
-    var asr = prayerTimes.GetProperty("Asr").ToString();
-    var maghrib = prayerTimes.GetProperty("Maghrib").ToString();
-    var isha = prayerTimes.GetProperty("Isha").ToString();
+    string fajr = prayerTimes.GetProperty("Fajr").ToString();
+    string sunrise = prayerTimes.GetProperty("Sunrise").ToString();
+    string dhuhr = prayerTimes.GetProperty("Dhuhr").ToString();
+    string asr = prayerTimes.GetProperty("Asr").ToString();
+    string maghrib = prayerTimes.GetProperty("Maghrib").ToString();
+    string isha = prayerTimes.GetProperty("Isha").ToString();
 
     return new AthanTimes(fajr, sunrise, dhuhr, asr, maghrib, isha);
   }

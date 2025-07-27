@@ -1,6 +1,6 @@
-using Spectre.Console;
+using System.Text.Json.Serialization;
 
-namespace athan.Models;
+namespace Athan.Classes;
 
 public class Location
 {
@@ -8,6 +8,7 @@ public class Location
   public string Country { get; set; }
   public double? Latitude { get; set; }
   public double? Longitude { get; set; }
+  
 
   public Location(string city, string country, double latitude, double longitude)
   {
@@ -16,6 +17,8 @@ public class Location
     Latitude = latitude;
     Longitude = longitude;
   }
+  
+  [JsonConstructor]
   public Location(string city, string country)
   {
     City = city;
