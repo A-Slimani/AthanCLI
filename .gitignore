@@ -6,3 +6,5 @@ obj/
 *.vscode/
 *.DS_Store
 AthanApp_temp/
+nupkg/
+.idea/
